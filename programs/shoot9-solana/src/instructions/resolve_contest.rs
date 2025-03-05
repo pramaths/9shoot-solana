@@ -1,6 +1,6 @@
-use crate::state::{AuthStore, ContestAccount, ContestStatus};
-use crate::ErrorCode;
 use anchor_lang::prelude::*;
+use crate::state::{AuthStore, ContestAccount, ContestStatus};
+use crate::error::ErrorCode;
 
 #[derive(Accounts)]
 pub struct ResolveContest<'info> {

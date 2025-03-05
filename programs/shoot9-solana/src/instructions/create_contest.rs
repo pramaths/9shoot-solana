@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use crate::state::{AuthStore, EventAccount, ContestAccount, ContestStatus};
-use crate::ErrorCode;
+use crate::error::ErrorCode;
 
 #[derive(Accounts)]
 pub struct CreateContest<'info> {
