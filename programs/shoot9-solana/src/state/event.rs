@@ -1,13 +1,12 @@
 use anchor_lang::prelude::*;
 
 #[account]
-pub struct EventAccount{
-    pub authority: PubKey,
+pub struct EventAccount {
+    pub authority: Pubkey,
     pub name: String,
     pub status: EventStatus,
-    pub bump: u8
+    pub bump: u8,
 }
-
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EventStatus {
@@ -16,13 +15,4 @@ pub enum EventStatus {
     Open,
     Cancelled,
     Suspended,
-}
-
-impl EventAccount{
-    pub const MAX_SIZE: usize = {
-        32 +
-        4 + 100 +
-        1 +
-        1;
-    };
 }
