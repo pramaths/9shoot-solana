@@ -6,7 +6,7 @@ edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "shoot9_solana"
+name = "shoot_9_solana"
 
 [features]
 no-entrypoint = []

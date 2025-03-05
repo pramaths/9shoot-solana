@@ -16,7 +16,7 @@ pub struct CreateContest<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + 32 + 32 + 8 + 8 + 1 + 8 + (32 * 1000) + 1 + 33,
+        space = 8 + 32 + 32 + 8 + 8 + 1 + 8 + (32 * 100) + 1 + 33,
         seeds = [
             b"contest", 
             event.key().as_ref(), 

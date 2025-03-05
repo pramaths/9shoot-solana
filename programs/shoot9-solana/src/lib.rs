@@ -8,7 +8,7 @@ pub mod error;
 declare_id!("DjeYpeDdifgrngbyx1hD8t6NpidGRpzpn1RdrMaWNgPd");
 
 #[program]
-pub mod shoot9_solana {
+pub mod shoot_9_solana {
     use super::*;
 
     pub fn initialize_auth(ctx: Context<InitializeAuth>) -> Result<()> {
