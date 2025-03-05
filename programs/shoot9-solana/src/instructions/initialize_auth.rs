@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 pub struct InitializeAuth<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
+    
     #[account(
         init,
         payer = admin,
@@ -13,6 +14,7 @@ pub struct InitializeAuth<'info> {
         bump
     )]
     pub auth_store: Account<'info, AuthStore>,
+    
     pub system_program: Program<'info, System>,
 }
 
@@ -26,7 +28,7 @@ pub fn handler_initialize_auth(ctx: Context<InitializeAuth>) -> Result<()> {
     let auth_store = &mut ctx.accounts.auth_store;
     auth_store.admin = ctx.accounts.admin.key();
     auth_store.authorized_creators = Vec::new();
-
+    
     emit!(AuthInitialized {
         admin: ctx.accounts.admin.key(),
         timestamp: Clock::get()?.unix_timestamp,

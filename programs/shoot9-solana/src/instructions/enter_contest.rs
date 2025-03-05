@@ -6,17 +6,19 @@ use crate::error::ErrorCode;
 pub struct EnterContest<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
+    
     #[account(
         mut,
         seeds = [
-            b"contest", 
-            contest.event.as_ref(), 
+            b"contest",
+            contest.authority.as_ref(),
             contest.contest_id.to_le_bytes().as_ref()
         ],
         bump,
         constraint = contest.status == ContestStatus::Open @ ErrorCode::InvalidContestStatus
     )]
     pub contest: Account<'info, ContestAccount>,
+    
     pub system_program: Program<'info, System>,
 }
 
@@ -32,10 +34,10 @@ pub struct ContestEntered {
 pub fn handler_enter_contest(ctx: Context<EnterContest>, amount: u64) -> Result<()> {
     let contest = &mut ctx.accounts.contest;
     let user = ctx.accounts.user.key();
-
+    
     // Verify correct entry fee amount
     require!(amount == contest.entry_fee, ErrorCode::IncorrectAmount);
-
+    
     // Transfer SOL to contest PDA
     let transfer_instruction = anchor_lang::system_program::Transfer {
         from: ctx.accounts.user.to_account_info(),
@@ -45,10 +47,10 @@ pub fn handler_enter_contest(ctx: Context<EnterContest>, amount: u64) -> Result<
         CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_instruction),
         amount
     )?;
-
+    
     contest.total_pool = contest.total_pool.checked_add(amount).ok_or(ErrorCode::Overflow)?;
     contest.participants.push(user);
-
+    
     emit!(ContestEntered {
         contest: contest.key(),
         contest_id: contest.contest_id,
@@ -56,6 +58,6 @@ pub fn handler_enter_contest(ctx: Context<EnterContest>, amount: u64) -> Result<
         amount,
         timestamp: Clock::get()?.unix_timestamp,
     });
-
+    
     Ok(())
 }

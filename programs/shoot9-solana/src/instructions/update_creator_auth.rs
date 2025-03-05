@@ -6,6 +6,7 @@ use crate::error::ErrorCode;
 pub struct UpdateCreatorAuth<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
+    
     #[account(
         mut,
         seeds = [b"auth_store"],
