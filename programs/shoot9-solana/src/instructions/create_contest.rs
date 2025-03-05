@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
 use crate::state::{AuthStore, EventAccount, ContestAccount, ContestStatus};
 use crate::ErrorCode;
 
@@ -7,7 +6,7 @@ use crate::ErrorCode;
 pub struct CreateContest<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
-    #[account(mut)]
+    #[account()]
     pub event: Account<'info, EventAccount>,
     #[account(
         init,
@@ -18,22 +17,12 @@ pub struct CreateContest<'info> {
     )]
     pub contest: Account<'info, ContestAccount>,
     #[account(
-        init,
-        payer = authority,
-        token::mint = token_mint,
-        token::authority = contest,
-    )]
-    pub contest_token_account: Account<'info, TokenAccount>,
-    pub token_mint: Account<'info, anchor_spl::token::Mint>,
-    #[account(
         seeds = [b"auth_store"],
         bump,
         constraint = auth_store.authorized_creators.contains(&authority.key()) @ ErrorCode::Unauthorized
     )]
     pub auth_store: Account<'info, AuthStore>,
     pub system_program: Program<'info, System>,
-    pub token_program: Program<'info, Token>,
-    pub rent: Sysvar<'info, Rent>,
 }
 
 #[event]

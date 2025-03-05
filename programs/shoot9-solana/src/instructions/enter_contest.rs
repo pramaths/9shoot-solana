@@ -34,7 +34,7 @@ pub fn handler(ctx: Context<EnterContest>, amount: u64) -> Result<()> {
     // Transfer SOL to contest PDA
     let transfer_instruction = anchor_lang::system_program::Transfer {
         from: ctx.accounts.user.to_account_info(),
-        to: ctx.accounts.contest.to_account_info(),
+        to: contest.to_account_info(),
     };
     anchor_lang::system_program::transfer(
         CpiContext::new(ctx.accounts.system_program.to_account_info(), transfer_instruction),
