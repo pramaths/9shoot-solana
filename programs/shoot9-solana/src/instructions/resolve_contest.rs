@@ -6,18 +6,21 @@ use crate::ErrorCode;
 pub struct ResolveContest<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
+
     #[account(
         mut,
         seeds = [b"contest", contest.event.as_ref()],
         bump,
     )]
     pub contest: Account<'info, ContestAccount>,
+
     #[account(
         seeds = [b"auth_store"],
         bump,
         constraint = auth_store.authorized_creators.contains(&authority.key()) @ ErrorCode::Unauthorized
     )]
     pub auth_store: Account<'info, AuthStore>,
+
     pub system_program: Program<'info, System>,
 }
 
@@ -29,9 +32,13 @@ pub struct ContestResolved {
     pub timestamp: i64,
 }
 
-pub fn handler(ctx: Context<ResolveContest>, winners: Vec<Pubkey>, payouts: Vec<u64>) -> Result<()> {
+pub fn handler<'a, 'b>(
+    ctx: Context<'_, '_, '_, 'b, ResolveContest<'b>>, 
+    winners: Vec<Pubkey>, 
+    payouts: Vec<u64>
+) -> Result<()> {
     let contest = &mut ctx.accounts.contest;
-    
+
     require!(winners.len() == 10 && payouts.len() == 10, ErrorCode::InvalidWinnersCount);
     require!(contest.status == ContestStatus::Open, ErrorCode::InvalidContestStatus);
 
@@ -40,16 +47,26 @@ pub fn handler(ctx: Context<ResolveContest>, winners: Vec<Pubkey>, payouts: Vec<
 
     contest.status = ContestStatus::Resolved;
 
-    // Transfer SOL to winners
-    for (winner, &payout) in winners.iter().zip(payouts.iter()) {
-        let seeds = &[b"contest", contest.event.as_ref(), &[contest.bump]];
-        let signer = &[&seeds[..]];
+    // Ensure we have enough remaining accounts for all winners
+    require!(ctx.remaining_accounts.len() >= 10, ErrorCode::MissingWinnerAccount);
 
+    // Prepare seeds for PDA signing
+    let seeds = &[b"contest", contest.event.as_ref(), &[contest.bump]];
+    let signer = &[&seeds[..]];
+
+    // Transfer SOL to winners using remaining_accounts
+    for (i, (&payout, &winner_key)) in payouts.iter().zip(winners.iter()).enumerate() {
+        let winner_account = &ctx.remaining_accounts[i];
+
+        // Verify the account matches the winner's pubkey
+        require!(winner_account.key() == winner_key, ErrorCode::MissingWinnerAccount);
+
+        // Perform direct transfer using system program
         let transfer_instruction = anchor_lang::system_program::Transfer {
-            from: ctx.accounts.contest.to_account_info(),
-            to: winner.to_account_info(),
+            from: contest.to_account_info(),
+            to: winner_account.to_account_info(),
         };
-        
+
         anchor_lang::system_program::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.system_program.to_account_info(),
@@ -66,5 +83,6 @@ pub fn handler(ctx: Context<ResolveContest>, winners: Vec<Pubkey>, payouts: Vec<
         total_payout,
         timestamp: Clock::get()?.unix_timestamp,
     });
+
     Ok(())
 }

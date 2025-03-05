@@ -34,7 +34,11 @@ pub mod shoot9_solana {
         enter_contest::handler(ctx, amount)
     }
 
-    pub fn resolve_contest(ctx: Context<ResolveContest>, winners: Vec<Pubkey>, payouts: Vec<u64>) -> Result<()> {
+    pub fn resolve_contest<'a, 'b>(
+        ctx: Context<'_, '_, '_, 'b, ResolveContest<'b>>,
+        winners: Vec<Pubkey>,
+        payouts: Vec<u64>,
+    ) -> Result<()> {
         resolve_contest::handler(ctx, winners, payouts)
     }
 }
