@@ -5,6 +5,7 @@ pub struct ContestAccount {
     pub authority: Pubkey,
     pub event: Pubkey,
     pub entry_fee: u64,
+    pub fee_receiver: Pubkey,
     pub status: ContestStatus,
     pub total_pool: u64,
     pub participants: Vec<Pubkey>,

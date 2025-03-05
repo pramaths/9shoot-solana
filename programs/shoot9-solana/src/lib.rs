@@ -26,8 +26,8 @@ pub mod shoot9_solana {
         create_event::handler(ctx, name)
     }
 
-    pub fn create_contest(ctx: Context<CreateContest>, entry_fee: u64, name: String) -> Result<()> {
-        create_contest::handler(ctx, entry_fee, name)
+    pub fn create_contest(ctx: Context<CreateContest>, entry_fee: u64, name: String, fee_receiver: Option<Pubkey>) -> Result<()> {
+        create_contest::handler(ctx, entry_fee, name, fee_receiver)
     }
 
     pub fn enter_contest(ctx: Context<EnterContest>, amount: u64) -> Result<()> {

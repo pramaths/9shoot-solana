@@ -11,7 +11,7 @@ pub struct CreateContest<'info> {
     #[account(
         init,
         payer = authority,
-        space = 8 + 32 + 32 + 8 + 1 + 8 + (32 * 1000) + 1,
+        space = 8 + 32 + 32 + 8 + 1 + 8 + (32 * 1000) + 1 + 33,
         seeds = [b"contest", event.key().as_ref()],
         bump
     )]
@@ -31,10 +31,11 @@ pub struct ContestCreated {
     pub event: Pubkey,
     pub entry_fee: u64,
     pub name: String,
+    pub fee_receiver: Pubkey,
     pub timestamp: i64,
 }
 
-pub fn handler(ctx: Context<CreateContest>, entry_fee: u64, name: String) -> Result<()> {
+pub fn handler(ctx: Context<CreateContest>, entry_fee: u64, name: String, fee_receiver: Option<Pubkey>) -> Result<()> {
     let contest = &mut ctx.accounts.contest;
     contest.authority = ctx.accounts.authority.key();
     contest.event = ctx.accounts.event.key();
@@ -42,6 +43,7 @@ pub fn handler(ctx: Context<CreateContest>, entry_fee: u64, name: String) -> Res
     contest.status = ContestStatus::Open;
     contest.total_pool = 0;
     contest.participants = Vec::new();
+    contest.fee_receiver = fee_receiver.unwrap_or(ctx.accounts.auth_store.admin);
     contest.bump = ctx.bumps.contest;
 
     emit!(ContestCreated {
@@ -49,6 +51,7 @@ pub fn handler(ctx: Context<CreateContest>, entry_fee: u64, name: String) -> Res
         event: contest.event,
         entry_fee,
         name,
+        fee_receiver: contest.fee_receiver,
         timestamp: Clock::get()?.unix_timestamp,
     });
     Ok(())
