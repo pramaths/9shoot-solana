@@ -22,7 +22,7 @@ pub struct CreatorAuthorizationRemoved {
     pub timestamp: i64,
 }
 
-pub fn handler(ctx: Context<RemoveCreatorAuth>, creator: Pubkey) -> Result<()> {
+pub fn handler_remove_creator_auth(ctx: Context<RemoveCreatorAuth>, creator: Pubkey) -> Result<()> {
     let auth_store = &mut ctx.accounts.auth_store;
     
     if let Some(index) = auth_store.authorized_creators.iter().position(|x| *x == creator) {

@@ -22,7 +22,7 @@ pub struct CreatorAuthorizationUpdated {
     pub timestamp: i64,
 }
 
-pub fn handler(ctx: Context<UpdateCreatorAuth>, creator: Pubkey) -> Result<()> {
+pub fn handler_update_creator_auth(ctx: Context<UpdateCreatorAuth>, creator: Pubkey) -> Result<()> {
     let auth_store = &mut ctx.accounts.auth_store;
     
     if !auth_store.authorized_creators.contains(&creator) {

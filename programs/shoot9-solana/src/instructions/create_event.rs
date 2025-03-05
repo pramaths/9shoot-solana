@@ -33,7 +33,7 @@ pub struct EventCreated {
     pub timestamp: i64,
 }
 
-pub fn handler(ctx: Context<CreateEvent>, event_id: u64, name: String) -> Result<()> {
+pub fn handler_create_event(ctx: Context<CreateEvent>, event_id: u64, name: String) -> Result<()> {
     let event = &mut ctx.accounts.event;
     event.authority = ctx.accounts.authority.key();
     event.event_id = event_id;

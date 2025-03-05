@@ -45,7 +45,7 @@ pub struct ContestCreated {
     pub timestamp: i64,
 }
 
-pub fn handler(
+pub fn handler_create_contest(
     ctx: Context<CreateContest>, 
     contest_id: u64,
     entry_fee: u64, 

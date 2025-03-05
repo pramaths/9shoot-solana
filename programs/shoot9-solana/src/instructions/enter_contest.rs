@@ -29,7 +29,7 @@ pub struct ContestEntered {
     pub timestamp: i64,
 }
 
-pub fn handler(ctx: Context<EnterContest>, amount: u64) -> Result<()> {
+pub fn handler_enter_contest(ctx: Context<EnterContest>, amount: u64) -> Result<()> {
     let contest = &mut ctx.accounts.contest;
     let user = ctx.accounts.user.key();
 

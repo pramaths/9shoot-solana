@@ -39,7 +39,7 @@ pub struct ContestResolved {
     pub timestamp: i64,
 }
 
-pub fn handler<'a, 'b>(
+pub fn handler_resolve_contest<'a, 'b>(
     ctx: Context<'_, '_, '_, 'b, ResolveContest<'b>>,
     winners: Vec<Pubkey>,
     payouts: Vec<u64>,

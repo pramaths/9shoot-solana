@@ -22,7 +22,7 @@ pub struct AuthInitialized {
     pub timestamp: i64,
 }
 
-pub fn handler(ctx: Context<InitializeAuth>) -> Result<()> {
+pub fn handler_initialize_auth(ctx: Context<InitializeAuth>) -> Result<()> {
     let auth_store = &mut ctx.accounts.auth_store;
     auth_store.admin = ctx.accounts.admin.key();
     auth_store.authorized_creators = Vec::new();
