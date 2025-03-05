@@ -3,6 +3,7 @@ use anchor_lang::prelude::*;
 #[account]
 pub struct EventAccount {
     pub authority: Pubkey,
+    pub event_id: u64,
     pub name: String,
     pub status: EventStatus,
     pub bump: u8,

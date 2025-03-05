@@ -9,7 +9,11 @@ pub struct ResolveContest<'info> {
 
     #[account(
         mut,
-        seeds = [b"contest", contest.event.as_ref()],
+        seeds = [
+            b"contest", 
+            contest.event.as_ref(), 
+            contest.contest_id.to_le_bytes().as_ref()
+        ],
         bump,
     )]
     pub contest: Account<'info, ContestAccount>,
@@ -27,6 +31,7 @@ pub struct ResolveContest<'info> {
 #[event]
 pub struct ContestResolved {
     pub contest: Pubkey,
+    pub contest_id: u64,
     pub winners_count: u64,
     pub total_payout: u64,
     pub fee_receiver: Pubkey,
@@ -78,8 +83,14 @@ pub fn handler<'a, 'b>(
         ErrorCode::MissingWinnerAccount
     );
 
+    let contest_id_bytes = contest.contest_id.to_le_bytes();
     // Prepare seeds for PDA signing
-    let seeds = &[b"contest", contest.event.as_ref(), &[contest.bump]];
+    let seeds = &[
+        b"contest", 
+        contest.event.as_ref(), 
+        contest_id_bytes.as_ref(), 
+        &[contest.bump]
+    ];
     let signer = &[&seeds[..]];
 
     // Transfer fee to fee_receiver (last remaining account)
@@ -128,6 +139,7 @@ pub fn handler<'a, 'b>(
 
     emit!(ContestResolved {
         contest: contest.key(),
+        contest_id: contest.contest_id,
         winners_count: winners.len() as u64,
         total_payout,
         fee_receiver: fee_receiver_key,

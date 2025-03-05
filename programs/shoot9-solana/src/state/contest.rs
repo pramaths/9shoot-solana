@@ -4,6 +4,7 @@ use anchor_lang::prelude::*;
 pub struct ContestAccount {
     pub authority: Pubkey,
     pub event: Pubkey,
+    pub contest_id: u64,
     pub entry_fee: u64,
     pub fee_receiver: Pubkey,
     pub status: ContestStatus,

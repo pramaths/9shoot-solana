@@ -23,12 +23,18 @@ pub mod shoot9_solana {
         remove_creator_auth::handler(ctx, creator)
     }
 
-    pub fn create_event(ctx: Context<CreateEvent>, name: String) -> Result<()> {
-        create_event::handler(ctx, name)
+    pub fn create_event(ctx: Context<CreateEvent>, event_id: u64, name: String) -> Result<()> {
+        create_event::handler(ctx, event_id, name)
     }
 
-    pub fn create_contest(ctx: Context<CreateContest>, entry_fee: u64, name: String, fee_receiver: Option<Pubkey>) -> Result<()> {
-        create_contest::handler(ctx, entry_fee, name, fee_receiver)
+    pub fn create_contest(
+        ctx: Context<CreateContest>, 
+        contest_id: u64,
+        entry_fee: u64, 
+        name: String, 
+        fee_receiver: Option<Pubkey>
+    ) -> Result<()> {
+        create_contest::handler(ctx, contest_id, entry_fee, name, fee_receiver)
     }
 
     pub fn enter_contest(ctx: Context<EnterContest>, amount: u64) -> Result<()> {
@@ -42,22 +48,4 @@ pub mod shoot9_solana {
     ) -> Result<()> {
         resolve_contest::handler(ctx, winners, payouts)
     }
-}
-
-#[error_code]
-pub enum ErrorCode {
-    #[msg("Unauthorized access")]
-    Unauthorized,
-    #[msg("Arithmetic overflow")]
-    Overflow,
-    #[msg("Invalid number of winners")]
-    InvalidWinnersCount,
-    #[msg("Insufficient pool balance")]
-    InsufficientPool,
-    #[msg("Invalid contest status")]
-    InvalidContestStatus,
-    #[msg("Missing winner account")]
-    MissingWinnerAccount,
-    #[msg("Incorrect entry fee amount")]
-    IncorrectAmount,
 }

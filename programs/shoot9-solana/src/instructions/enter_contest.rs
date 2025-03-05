@@ -8,7 +8,11 @@ pub struct EnterContest<'info> {
     pub user: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"contest", contest.event.as_ref()],
+        seeds = [
+            b"contest", 
+            contest.event.as_ref(), 
+            contest.contest_id.to_le_bytes().as_ref()
+        ],
         bump,
         constraint = contest.status == ContestStatus::Open @ ErrorCode::InvalidContestStatus
     )]
@@ -19,6 +23,7 @@ pub struct EnterContest<'info> {
 #[event]
 pub struct ContestEntered {
     pub contest: Pubkey,
+    pub contest_id: u64,
     pub user: Pubkey,
     pub amount: u64,
     pub timestamp: i64,
@@ -46,9 +51,11 @@ pub fn handler(ctx: Context<EnterContest>, amount: u64) -> Result<()> {
 
     emit!(ContestEntered {
         contest: contest.key(),
+        contest_id: contest.contest_id,
         user,
         amount,
         timestamp: Clock::get()?.unix_timestamp,
     });
+
     Ok(())
 }
