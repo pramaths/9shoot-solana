@@ -2,7 +2,6 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Shoot9Solana } from "../target/types/shoot_9_solana";
 import { assert } from "chai";
-import { getKeypairFromFile } from "@solana-developers/helpers";
 
 describe("shoot9-solana", () => {
   // Configure the client to use the local cluster
@@ -11,31 +10,24 @@ describe("shoot9-solana", () => {
 
   const program = anchor.workspace.Shoot9Solana as Program<Shoot9Solana>;
 
-  // Derive PDAs (will use await for admin later)
+  // Derive PDAs
   const [authStorePda] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from("auth_store")],
     program.programId
   );
 
   // Test wallets
-  const adminPromise = getKeypairFromFile("/home/ritikbhatt020/.config/solana/id.json");
+  const admin = provider.wallet.publicKey;
+  const creator1 = anchor.web3.Keypair.generate();
+  const creator2 = anchor.web3.Keypair.generate();
   const user1 = anchor.web3.Keypair.generate();
   const user2 = anchor.web3.Keypair.generate();
 
-  // Since admin is a Promise, we’ll resolve it in before() and use it globally
-  let admin: anchor.web3.Keypair;
-
+  // Airdrop SOL to test accounts
   before(async () => {
-    admin = await adminPromise;
-
-    // Update provider to use admin keypair
-    const wallet = new anchor.Wallet(admin);
-    const updatedProvider = new anchor.AnchorProvider(provider.connection, wallet, provider.opts);
-    anchor.setProvider(updatedProvider);
-
-    // Airdrop SOL to test accounts
     const airdrops = [
-      provider.connection.requestAirdrop(admin.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL),
+      provider.connection.requestAirdrop(creator1.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL),
+      provider.connection.requestAirdrop(creator2.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL),
       provider.connection.requestAirdrop(user1.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL),
       provider.connection.requestAirdrop(user2.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL),
     ];
@@ -48,37 +40,35 @@ describe("shoot9-solana", () => {
     await program.methods
       .initializeAuth()
       .accountsPartial({
-        admin: admin.publicKey,
+        admin: admin,
         authStore: authStorePda,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
-      .signers([admin])
       .rpc();
 
     const authStoreAccount = await program.account.authStore.fetch(authStorePda);
-    assert.equal(authStoreAccount.admin.toBase58(), admin.publicKey.toBase58());
+    assert.equal(authStoreAccount.admin.toBase58(), admin.toBase58());
     assert.deepEqual(authStoreAccount.authorizedCreators, []);
   });
 
-  it("Should update creator authorization for admin", async () => {
+  it("Should update creator authorization", async () => {
     await program.methods
-      .updateCreatorAuth(admin.publicKey)
+      .updateCreatorAuth(creator1.publicKey)
       .accountsPartial({
-        admin: admin.publicKey,
+        admin: admin,
         authStore: authStorePda,
       })
-      .signers([admin])
       .rpc();
 
     const authStoreAccount = await program.account.authStore.fetch(authStorePda);
-    assert.equal(authStoreAccount.authorizedCreators[0].toBase58(), admin.publicKey.toBase58());
+    assert.equal(authStoreAccount.authorizedCreators[0].toBase58(), creator1.publicKey.toBase58());
   });
 
-  it("Should create a contest with admin", async () => {
+  it("Should create a contest", async () => {
     const [contestPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from("contest"),
-        admin.publicKey.toBuffer(),
+        creator1.publicKey.toBuffer(),
         Buffer.from(new anchor.BN(1).toArray("le", 8)),
       ],
       program.programId
@@ -92,19 +82,19 @@ describe("shoot9-solana", () => {
         null // no specific fee receiver
       )
       .accountsPartial({
-        authority: admin.publicKey,
+        authority: creator1.publicKey,
         contest: contestPda,
         authStore: authStorePda,
         systemProgram: anchor.web3.SystemProgram.programId,
       })
-      .signers([admin])
+      .signers([creator1])
       .rpc();
 
     const contestAccount = await program.account.contestAccount.fetch(contestPda);
     assert.equal(contestAccount.entryFee.toNumber(), anchor.web3.LAMPORTS_PER_SOL);
     assert.equal(contestAccount.contestId.toNumber(), 1);
     assert.equal(contestAccount.name, "Real Madrid vs Barcelona");
-    // assert.equal(contestAccount.status, "open");
+    // assert.equal(contestAccount.status, "open"); // Check enum variant
     assert.equal(contestAccount.totalPool.toNumber(), 0);
     assert.deepEqual(contestAccount.participants, []);
   });
@@ -113,7 +103,7 @@ describe("shoot9-solana", () => {
     const [contestPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from("contest"),
-        admin.publicKey.toBuffer(),
+        creator1.publicKey.toBuffer(),
         Buffer.from(new anchor.BN(1).toArray("le", 8)),
       ],
       program.programId
@@ -152,56 +142,57 @@ describe("shoot9-solana", () => {
     const [contestPda] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from("contest"),
-        admin.publicKey.toBuffer(),
+        creator1.publicKey.toBuffer(),
         Buffer.from(new anchor.BN(1).toArray("le", 8)),
       ],
       program.programId
     );
 
-    const winners = [user1.publicKey, user2.publicKey, ...Array(8).fill(admin.publicKey)];
+    // Prepare winners and payouts (10 winners required)
+    const winners = [
+      user1.publicKey,
+      user2.publicKey,
+      ...Array(8).fill(admin), // Pad with admin for 10 total winners
+    ];
     const payouts = [
-      new anchor.BN(anchor.web3.LAMPORTS_PER_SOL * 0.9), // 0.9 SOL to user1
-      new anchor.BN(anchor.web3.LAMPORTS_PER_SOL * 0.9), // 0.9 SOL to user2
-      ...Array(8).fill(new anchor.BN(0)),
+      new anchor.BN(anchor.web3.LAMPORTS_PER_SOL * 0.4), // 1st place
+      new anchor.BN(anchor.web3.LAMPORTS_PER_SOL * 0.2), // 2nd place
+      ...Array(8).fill(new anchor.BN(0)), // Remaining winners get 0
     ];
 
     const initialBalance1 = await provider.connection.getBalance(user1.publicKey);
     const initialBalance2 = await provider.connection.getBalance(user2.publicKey);
-    const initialAdminBalance = await provider.connection.getBalance(admin.publicKey);
+    const initialAdminBalance = await provider.connection.getBalance(admin);
 
-    try {
-      await program.methods
-        .resolveContest(winners, payouts)
-        .accountsPartial({
-          authority: admin.publicKey,
-          contest: contestPda,
-          authStore: authStorePda,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .remainingAccounts([
-          { pubkey: user1.publicKey, isWritable: true, isSigner: false }, // Winner 0
-          { pubkey: user2.publicKey, isWritable: true, isSigner: false }, // Winner 1
-          ...Array(8).fill({ pubkey: admin.publicKey, isWritable: true, isSigner: false }), // Winners 2-9
-          { pubkey: admin.publicKey, isWritable: true, isSigner: false }, // Fee receiver (index 10)
-        ])
-        .signers([admin])
-        .rpc();
-    } catch (err) {
-      console.log("Transaction failed:", err);
-      console.log("Logs:", err.logs);
-      throw err;
-    }
+    // Resolve contest
+    await program.methods
+      .resolveContest(winners, payouts)
+      .accountsPartial({
+        authority: creator1.publicKey,
+        contest: contestPda,
+        authStore: authStorePda,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .remainingAccounts([
+        { pubkey: user1.publicKey, isWritable: true, isSigner: false },
+        { pubkey: user2.publicKey, isWritable: true, isSigner: false },
+        ...Array(8).fill({ pubkey: admin, isWritable: true, isSigner: false }),
+        { pubkey: admin, isWritable: true, isSigner: false }, // fee receiver
+      ])
+      .signers([creator1])
+      .rpc();
 
     const finalBalance1 = await provider.connection.getBalance(user1.publicKey);
     const finalBalance2 = await provider.connection.getBalance(user2.publicKey);
-    const finalAdminBalance = await provider.connection.getBalance(admin.publicKey);
+    const finalAdminBalance = await provider.connection.getBalance(admin);
 
     const contestAccount = await program.account.contestAccount.fetch(contestPda);
-    // assert.equal(contestAccount.status, "resolved");
+    // assert.equal(contestAccount.status, "resolved"); // Check enum variant
 
-    const expectedPayout1 = anchor.web3.LAMPORTS_PER_SOL * 0.9;
-    const expectedPayout2 = anchor.web3.LAMPORTS_PER_SOL * 0.9;
-    const expectedFee = (2 * anchor.web3.LAMPORTS_PER_SOL) / 10; // 0.2 SOL
+    // Verify payouts (accounting for gas fees, approximate checks)
+    const expectedPayout1 = anchor.web3.LAMPORTS_PER_SOL * 0.4;
+    const expectedPayout2 = anchor.web3.LAMPORTS_PER_SOL * 0.2;
+    const expectedFee = (2 * anchor.web3.LAMPORTS_PER_SOL) / 10; // 10% fee
     assert.approximately(finalBalance1 - initialBalance1, expectedPayout1, 1e6, "User1 payout incorrect");
     assert.approximately(finalBalance2 - initialBalance2, expectedPayout2, 1e6, "User2 payout incorrect");
     assert.approximately(finalAdminBalance - initialAdminBalance, expectedFee, 1e6, "Fee payout incorrect");
@@ -209,12 +200,11 @@ describe("shoot9-solana", () => {
 
   it("Should remove creator authorization", async () => {
     await program.methods
-      .removeCreatorAuth(admin.publicKey)
+      .removeCreatorAuth(creator1.publicKey)
       .accountsPartial({
-        admin: admin.publicKey,
+        admin: admin,
         authStore: authStorePda,
       })
-      .signers([admin])
       .rpc();
 
     const authStoreAccount = await program.account.authStore.fetch(authStorePda);
