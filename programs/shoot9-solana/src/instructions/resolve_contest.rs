@@ -83,15 +83,10 @@ pub fn handler_resolve_contest<'a, 'b>(
         ErrorCode::MissingWinnerAccount
     );
     
-    let contest_id_bytes = contest.contest_id.to_le_bytes();
-    // Prepare seeds for PDA signing
-    let seeds = &[
-        b"contest",
-        contest.authority.as_ref(),
-        contest_id_bytes.as_ref(),
-        &[contest.bump]
-    ];
-    let signer = &[&seeds[..]];
+    // Log for debugging
+    msg!("Fee receiver: {:?}", fee_receiver_key);
+    msg!("Contest PDA: {:?}", contest.key());
+    msg!("Remaining accounts len: {:?}", ctx.remaining_accounts.len());
     
     // Transfer fee to fee_receiver (last remaining account)
     let fee_receiver_account = &ctx.remaining_accounts[10]; // Index 10 is fee receiver
@@ -99,22 +94,24 @@ pub fn handler_resolve_contest<'a, 'b>(
         fee_receiver_account.key() == fee_receiver_key,
         ErrorCode::MissingWinnerAccount
     );
+
+    msg!("Attempting fee transfer of {} lamports to {:?}", fee_amount, fee_receiver_account.key());
     
-    let fee_transfer_instruction = anchor_lang::system_program::Transfer {
-        from: contest.to_account_info(),
-        to: fee_receiver_account.to_account_info(),
-    };
-    anchor_lang::system_program::transfer(
-        CpiContext::new_with_signer(
-            ctx.accounts.system_program.to_account_info(),
-            fee_transfer_instruction,
-            signer,
-        ),
-        fee_amount,
-    )?;
+    // Get the lamports from the account info
+    let contest_account_info = contest.to_account_info();
+    let contest_starting_lamports = contest_account_info.lamports();
+    
+    // Instead of using system_program::transfer which fails with PDAs that have data,
+    // directly modify the lamports using lamports() method
+    **contest_account_info.try_borrow_mut_lamports()? = contest_starting_lamports.checked_sub(fee_amount).ok_or(ErrorCode::Overflow)?;
+    **fee_receiver_account.try_borrow_mut_lamports()? = fee_receiver_account.lamports().checked_add(fee_amount).ok_or(ErrorCode::Overflow)?;
     
     // Transfer SOL to winners using remaining_accounts
     for (i, (&payout, &winner_key)) in payouts.iter().zip(winners.iter()).enumerate() {
+        if payout == 0 {
+            continue; // Skip zero payouts
+        }
+        
         let winner_account = &ctx.remaining_accounts[i];
         
         // Verify the account matches the winner's pubkey
@@ -123,19 +120,10 @@ pub fn handler_resolve_contest<'a, 'b>(
             ErrorCode::MissingWinnerAccount
         );
         
-        let transfer_instruction = anchor_lang::system_program::Transfer {
-            from: contest.to_account_info(),
-            to: winner_account.to_account_info(),
-        };
-        
-        anchor_lang::system_program::transfer(
-            CpiContext::new_with_signer(
-                ctx.accounts.system_program.to_account_info(),
-                transfer_instruction,
-                signer,
-            ),
-            payout,
-        )?;
+        // Direct lamport transfer instead of using system program
+        let contest_current_lamports = contest_account_info.lamports();
+        **contest_account_info.try_borrow_mut_lamports()? = contest_current_lamports.checked_sub(payout).ok_or(ErrorCode::Overflow)?;
+        **winner_account.try_borrow_mut_lamports()? = winner_account.lamports().checked_add(payout).ok_or(ErrorCode::Overflow)?;
     }
     
     emit!(ContestResolved {
