@@ -5,7 +5,7 @@ pub mod instructions;
 pub mod state;
 pub mod error;
 
-declare_id!("DjeYpeDdifgrngbyx1hD8t6NpidGRpzpn1RdrMaWNgPd");
+declare_id!("AS39cyPiYMfcthVhdJhAq1Bc3jjVoo4a7VRcvFvQuEMP");
 
 #[program]
 pub mod shoot_9_solana {
