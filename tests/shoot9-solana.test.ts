@@ -148,23 +148,22 @@ describe("shoot9-solana", () => {
       program.programId
     );
 
-    // Prepare winners and payouts (10 winners required)
+    // Only create the winners and payouts we actually need
     const winners = [
       user1.publicKey,
-      user2.publicKey,
-      ...Array(8).fill(admin), // Pad with admin for 10 total winners
+      user2.publicKey
     ];
+    
     const payouts = [
       new anchor.BN(anchor.web3.LAMPORTS_PER_SOL * 0.4), // 1st place
       new anchor.BN(anchor.web3.LAMPORTS_PER_SOL * 0.2), // 2nd place
-      ...Array(8).fill(new anchor.BN(0)), // Remaining winners get 0
     ];
 
     const initialBalance1 = await provider.connection.getBalance(user1.publicKey);
     const initialBalance2 = await provider.connection.getBalance(user2.publicKey);
     const initialAdminBalance = await provider.connection.getBalance(admin);
 
-    // Resolve contest
+    // Resolve contest - only include the actual winners plus fee receiver in remaining accounts
     await program.methods
       .resolveContest(winners, payouts)
       .accountsPartial({
@@ -176,7 +175,6 @@ describe("shoot9-solana", () => {
       .remainingAccounts([
         { pubkey: user1.publicKey, isWritable: true, isSigner: false },
         { pubkey: user2.publicKey, isWritable: true, isSigner: false },
-        ...Array(8).fill({ pubkey: admin, isWritable: true, isSigner: false }),
         { pubkey: admin, isWritable: true, isSigner: false }, // fee receiver
       ])
       .signers([creator1])
@@ -187,7 +185,7 @@ describe("shoot9-solana", () => {
     const finalAdminBalance = await provider.connection.getBalance(admin);
 
     const contestAccount = await program.account.contestAccount.fetch(contestPda);
-    // assert.equal(contestAccount.status, "resolved"); // Check enum variant
+    assert.deepEqual(contestAccount.status, { resolved: {} });
 
     // Verify payouts (accounting for gas fees, approximate checks)
     const expectedPayout1 = anchor.web3.LAMPORTS_PER_SOL * 0.4;
