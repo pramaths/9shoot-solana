@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { Shoot9Solana } from "../../target/types/shoot_9_solana";
+import { Shoot9Solana } from "../target/types/shoot_9_solana";
 import { expect } from "chai";
 import {
   Connection,
@@ -8,7 +8,7 @@ import {
   PublicKey,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
-import Shoot9SDK from "../../sdk/contract-sdk";
+import Shoot9SDK from "../sdk/contract-sdk";
 
 describe("shoot9-solana sdk tests", () => {
   // Configure the client to use the local cluster
