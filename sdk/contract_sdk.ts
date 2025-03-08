@@ -210,12 +210,12 @@ export class Shoot9SDK {
   ): Promise<string> {
     const contest = await this.findContestPDA(this.wallet.publicKey, contestId);
     const authStore = await this.findAuthStorePDA();
-
-    // Pad winners to exactly 10
-    const paddedWinners = this.padWinners(winners);
-    const winnerWallets = paddedWinners.map(w => w.wallet);
-    const payouts = paddedWinners.map(w => new BN(Math.floor(w.payout * LAMPORTS_PER_SOL)));
-
+  
+    // No need to pad winners anymore since we support variable number
+    const winnerWallets = winners.map(w => w.wallet);
+    const payouts = winners.map(w => new BN(Math.floor(w.payout * LAMPORTS_PER_SOL)));
+  
+    // Create remaining accounts - winners first, then fee receiver at the end
     const remainingAccounts = [
       ...winnerWallets.map(pubkey => ({
         pubkey,
@@ -228,7 +228,7 @@ export class Shoot9SDK {
         isSigner: false,
       },
     ];
-
+  
     try {
       const tx = await this.program.methods
         .resolveContest(winnerWallets, payouts)
@@ -240,14 +240,14 @@ export class Shoot9SDK {
         })
         .remainingAccounts(remainingAccounts)
         .rpc();
-
+  
       await this.connection.confirmTransaction(tx, "confirmed");
-
+  
       const contestAccount = await this.program.account.contestAccount.fetch(contest);
       if (!contestAccount.status.resolved) {
         throw new Shoot9SDKError("Contest was not successfully resolved");
       }
-
+  
       console.log("Resolved contest:", contest.toString());
       return tx;
     } catch (e) {
@@ -294,20 +294,6 @@ export class Shoot9SDK {
   public async getContestPool(creator: PublicKey, contestId: number): Promise<number> {
     const contestAccount = await this.getContest(creator, contestId);
     return Number(contestAccount.totalPool) / LAMPORTS_PER_SOL;
-  }
-
-  private padWinners(winners: Winner[]): Winner[] {
-    if (winners.length > 10) {
-      return winners.slice(0, 10);
-    }
-    if (winners.length < 10) {
-      const padding = Array(10 - winners.length).fill({
-        wallet: this.wallet.publicKey,
-        payout: 0,
-      });
-      return [...winners, ...padding];
-    }
-    return winners;
   }
 }
 

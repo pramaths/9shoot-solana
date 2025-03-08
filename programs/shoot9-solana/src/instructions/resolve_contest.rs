@@ -46,10 +46,18 @@ pub fn handler_resolve_contest<'a, 'b>(
 ) -> Result<()> {
     let contest = &mut ctx.accounts.contest;
     
+    // Ensure payouts and winners arrays have the same length
     require!(
-        winners.len() == 10 && payouts.len() == 10,
+        winners.len() == payouts.len(),
         ErrorCode::InvalidWinnersCount
     );
+    
+    // Ensure at least one winner is specified
+    require!(
+        !winners.is_empty(),
+        ErrorCode::InvalidWinnersCount
+    );
+    
     require!(
         contest.status == ContestStatus::Open,
         ErrorCode::InvalidContestStatus
@@ -77,9 +85,9 @@ pub fn handler_resolve_contest<'a, 'b>(
     
     contest.status = ContestStatus::Resolved;
     
-    // Ensure we have enough remaining accounts (10 winners + 1 fee receiver)
+    // Ensure we have enough remaining accounts (winners + 1 fee receiver)
     require!(
-        ctx.remaining_accounts.len() >= 11,
+        ctx.remaining_accounts.len() >= winners.len() + 1,
         ErrorCode::MissingWinnerAccount
     );
     
@@ -89,7 +97,9 @@ pub fn handler_resolve_contest<'a, 'b>(
     msg!("Remaining accounts len: {:?}", ctx.remaining_accounts.len());
     
     // Transfer fee to fee_receiver (last remaining account)
-    let fee_receiver_account = &ctx.remaining_accounts[10]; // Index 10 is fee receiver
+    let fee_receiver_index = winners.len(); // Fee receiver is after all winners
+    let fee_receiver_account = &ctx.remaining_accounts[fee_receiver_index];
+    
     require!(
         fee_receiver_account.key() == fee_receiver_key,
         ErrorCode::MissingWinnerAccount
