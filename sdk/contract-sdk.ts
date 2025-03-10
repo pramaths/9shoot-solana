@@ -204,11 +204,12 @@ export class Shoot9SDK {
   }
 
   public async resolveContest(
+    contestCreator: PublicKey,
     contestId: number,
     winners: Winner[],
     feeReceiver: PublicKey
   ): Promise<string> {
-    const contest = await this.findContestPDA(this.wallet.publicKey, contestId);
+    const contest = await this.findContestPDA(contestCreator, contestId);
     const authStore = await this.findAuthStorePDA();
   
     // No need to pad winners anymore since we support variable number

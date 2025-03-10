@@ -21,7 +21,7 @@ pub struct ResolveContest<'info> {
     #[account(
         seeds = [b"auth_store"],
         bump,
-        constraint = auth_store.authorized_creators.contains(&authority.key()) @ ErrorCode::Unauthorized
+        constraint = auth_store.admin == authority.key() @ ErrorCode::Unauthorized
     )]
     pub auth_store: Account<'info, AuthStore>,
     

@@ -175,8 +175,17 @@ describe("shoot9-solana sdk tests", () => {
       },
     ];
 
+    // Check contest status
+    const contestAdmin = await adminSDK.getContest(
+      creatorWallet.publicKey,
+      contestId
+    );
+
+    console.log("Contest admin:", contestAdmin);
+
     // Resolve contest
-    const tx = await creatorSDK.resolveContest(
+    const tx = await adminSDK.resolveContest(
+      creatorWallet.publicKey,
       contestId,
       winners,
       feeReceiverWallet.publicKey
@@ -274,7 +283,8 @@ describe("shoot9-solana sdk tests", () => {
     ];
 
     // Resolve contest
-    await creatorSDK.resolveContest(
+    await adminSDK.resolveContest(
+      creatorWallet.publicKey,
       newContestId,
       winners,
       feeReceiverWallet.publicKey
